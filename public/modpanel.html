@@ -27,6 +27,48 @@
     }
     .selected{ outline:2px solid #4ade80; box-shadow:0 0 0 2px rgba(74,222,128,.2); }
     input[type=range]{ width: 220px; }
+	:root{
+  --frameColor: #e11d48;   /* rojo marco exterior */
+  --safeColor:  #22c55e;   /* verde zona segura  */
+}
+
+/* Contenedor del marco por encima de las miniaturas */
+#obsFrame {
+  position:absolute;
+  inset:0;
+  pointer-events:none;   /* no tapa el drag */
+  z-index: 9999;         /* por encima de las .thumb */
+}
+
+#obsFrame.hidden { display:none; }
+
+#obsFrame .border {
+  position:absolute;
+  inset:0;
+  box-shadow: 0 0 0 4px var(--frameColor) inset;
+  border-radius: 0;
+}
+
+#obsFrame .safe {
+  position:absolute;
+  left: var(--padL, 0px);
+  right: var(--padR, 0px);
+  top: var(--padT, 0px);
+  bottom: var(--padB, 0px);
+  box-shadow: 0 0 0 2px var(--safeColor) inset;
+}
+
+/* Rejilla tipo “regla de tercios” */
+#obsFrame .grid {
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,.35) 1px, transparent 1px);
+  background-size: calc(100%/3) 100%, 100% calc(100%/3);
+  opacity: .4;
+}
+
   </style>
 </head>
 <body>
@@ -82,8 +124,46 @@
       <button id="remove">Eliminar</button>
     </div>
   </div>
+<div class="card">
+  <div class="row">
+    <strong>Marco OBS</strong>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="showFrame" checked> Mostrar marco</label>
+    <label><input type="checkbox" id="showGrid" checked> Rejilla (tercios)</label>
+    <label><input type="checkbox" id="showSafe" checked> Zona segura</label>
+  </div>
+  <div class="row">
+    <label>Preset:
+      <select id="safePreset">
+        <option value="0">Sin zona segura</option>
+        <option value="5" selected>5%</option>
+        <option value="10">10%</option>
+        <option value="custom">Custom</option>
+      </select>
+    </label>
+    <span class="small">Custom (px):</span>
+    <label>Top <input type="number" id="padT" value="0" style="width:80px"></label>
+    <label>Right <input type="number" id="padR" value="0" style="width:80px"></label>
+    <label>Bottom <input type="number" id="padB" value="0" style="width:80px"></label>
+    <label>Left <input type="number" id="padL" value="0" style="width:80px"></label>
+    <button id="applyFrame">Aplicar</button>
+  </div>
+  <div class="row small">
+    El marco rojo delimita el tamaño real del overlay en OBS. La zona segura (verde) te ayuda a no pegar elementos a los bordes.
+  </div>
+</div>
 
-  <div id="stageWrap"><div id="stage"></div></div>
+  <div id="stageWrap"><div id="stage">
+  <!-- Marco superpuesto (no interfiere con el drag) -->
+  <div id="obsFrame" class="hidden">
+    <div class="border"></div>
+    <div class="grid"></div>
+    <div class="safe"></div>
+  </div>
+</div>
+</div>
+  
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -196,6 +276,78 @@
         document.querySelectorAll('.thumb').forEach(t=>t.classList.remove('selected')); 
         document.getElementById('controls').style.display='none'; 
       };
+	  ensureObsFrame(); // <-- asegura el marco por encima del contenido
+
+	 
+// === Marco OBS ===
+function ensureObsFrame(){
+  const stage = document.getElementById('stage');
+  let frame = document.getElementById('obsFrame');
+  if (!frame) {
+    frame = document.createElement('div');
+    frame.id = 'obsFrame';
+    frame.innerHTML = '<div class="border"></div><div class="grid"></div><div class="safe"></div>';
+    stage.appendChild(frame);
+  } else {
+    // re-append para traerlo al frente si el render limpió el stage
+    stage.appendChild(frame);
+  }
+  updateObsFrame(); // sincroniza estado visual
+}
+
+function updateObsFrame(){
+  const stage = document.getElementById('stage');
+  const frame = document.getElementById('obsFrame');
+  if (!frame) return;
+
+  const showFrame = document.getElementById('showFrame').checked;
+  const showGrid  = document.getElementById('showGrid').checked;
+  const showSafe  = document.getElementById('showSafe').checked;
+  const preset    = document.getElementById('safePreset').value;
+
+  // Mostrar/ocultar contenedor
+  frame.classList.toggle('hidden', !showFrame);
+
+  // Mostrar/ocultar capas
+  frame.querySelector('.grid').style.display  = showGrid ? 'block' : 'none';
+  frame.querySelector('.safe').style.display  = showSafe ? 'block' : 'none';
+
+  // Cálculo de paddings de la zona segura
+  const W = stage.clientWidth;
+  const H = stage.clientHeight;
+
+  let padT = +document.getElementById('padT').value || 0;
+  let padR = +document.getElementById('padR').value || 0;
+  let padB = +document.getElementById('padB').value || 0;
+  let padL = +document.getElementById('padL').value || 0;
+
+  if (preset !== 'custom') {
+    const p = Number(preset) || 0; // %
+    padT = padB = Math.round(H * p / 100);
+    padL = padR = Math.round(W * p / 100);
+    // refleja en inputs para que veas los px reales
+    document.getElementById('padT').value = padT;
+    document.getElementById('padB').value = padB;
+    document.getElementById('padL').value = padL;
+    document.getElementById('padR').value = padR;
+  }
+
+  // Aplica como variables CSS al propio frame
+  frame.style.setProperty('--padT', padT + 'px');
+  frame.style.setProperty('--padR', padR + 'px');
+  frame.style.setProperty('--padB', padB + 'px');
+  frame.style.setProperty('--padL', padL + 'px');
+}
+
+// Listeners UI marco
+['showFrame','showGrid','showSafe','safePreset','padT','padR','padB','padL'].forEach(id=>{
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', updateObsFrame);
+});
+document.getElementById('applyFrame')?.addEventListener('click', updateObsFrame);
+
+ 
+	  
     }
 
     // === Sliders (escala/rotación/opacidad) con throttle ===
