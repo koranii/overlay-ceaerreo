@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Overlay</title>
+  <style>
+    html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
+    #stage { position:relative; width:100vw; height:100vh; }
+    .item { position:absolute; transform-origin:center center; will-change: transform, opacity; }
+    .hidden { display:none; }
+  </style>
+</head>
+<body>
+  <div id="stage"></div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const stage = document.getElementById('stage');
+    const items = new Map();        // id -> elemento DOM
+    const lastKnown = new Map();    // id -> { x, y, scale, rot, opacity, zIndex, visible, muted, loop }
+
+    function getSnapshot(it) {
+      return {
+        x: it.x || 0,
+        y: it.y || 0,
+        scale: it.scale || 1,
+        rot: it.rot || 0,
+        opacity: it.opacity == null ? 1 : it.opacity,
+        zIndex: it.zIndex || 1,
+        visible: it.visible !== false,
+        muted: !!it.muted,
+        loop: !!it.loop
+      };
+    }
+
+    function mount(item){
+      let el;
+      if(item.type === 'image'){
+        el = document.createElement('img'); el.src = item.url;
+      } else if(item.type === 'video'){
+        el = document.createElement('video');
+        el.src = item.url;
+        el.autoplay = true; el.loop = !!item.loop; el.muted = !!item.muted; el.playsInline = true; el.controls = false;
+      } else if(item.type === 'audio'){
+        el = document.createElement('audio');
+        el.src = item.url; el.autoplay = true; el.loop = !!item.loop; el.muted = !!item.muted; el.controls = false;
+      } else {
+        return;
+      }
+      el.className = 'item';
+      el.dataset.id = item.id;
+      stage.appendChild(el);
+      items.set(item.id, el);
+      const snap = getSnapshot(item);
+      lastKnown.set(item.id, snap);
+      applyStyles(item.id, snap);
+    }
+
+    function applyStyles(id, snap){
+      const el = items.get(id); if(!el) return;
+      el.style.zIndex = String(snap.zIndex);
+      el.style.opacity = snap.opacity;
+      el.style.transform = `translate3d(${snap.x}px, ${snap.y}px, 0) scale(${snap.scale}) rotate(${snap.rot}deg)`;
+      el.classList.toggle('hidden', !snap.visible);
+      if (el.tagName === 'VIDEO') {
+        el.muted = snap.muted;
+        el.loop = snap.loop;
+      }
+    }
+
+    function unmount(id){
+      const el = items.get(id); if(!el) return;
+      el.remove(); items.delete(id); lastKnown.delete(id);
+    }
+
+    // ---- INIT Y CAMBIOS PERSISTENTES ----
+    socket.on('state:init', (state) => {
+      stage.innerHTML = '';
+      items.clear(); lastKnown.clear();
+      state.forEach(mount);
+    });
+
+    socket.on('item:added', (it) => mount(it));
+
+    socket.on('item:updated', ({ id, patch }) => {
+      // patch ya trae el estado completo del item desde el server
+      const snap = getSnapshot(patch);
+      lastKnown.set(id, snap);
+      applyStyles(id, snap);
+    });
+
+    socket.on('item:removed', (id) => unmount(id));
+
+    socket.on('items:cleared', () => {
+      stage.innerHTML = '';
+      items.clear(); lastKnown.clear();
+    });
+
+    // ---- PREVIEW EN TIEMPO REAL (NO PERSISTE) ----
+    socket.on('item:preview', ({ id, x, y }) => {
+      const el = items.get(id); if(!el) return;
+      // Usamos el último snapshot conocido para mantener scale/rot/opacity correctos
+      const snap = lastKnown.get(id) || { x:0, y:0, scale:1, rot:0, opacity:1, zIndex:1, visible:true, muted:false, loop:false };
+      const temp = { ...snap, x, y };
+      applyStyles(id, temp);
+    });
+  </script>
+</body>
+</html>
