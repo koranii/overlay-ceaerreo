@@ -5,125 +5,98 @@
   <title>Panel de Moderadores</title>
   <style>
     :root{
-      /* Ajusta estos valores a la resolución de tu canvas en OBS */
+      /* Ajusta por defecto a tu canvas en OBS */
       --STAGE-W: 1920px;
       --STAGE-H: 1080px;
+
+      --frameColor: #e11d48;   /* rojo marco exterior */
+      --safeColor:  #22c55e;   /* verde zona segura  */
     }
-    body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:16px;}
+    body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:16px; color:#e5e7eb; background:#0b0b0c;}
     .row{display:flex; gap:8px; margin-bottom:10px; align-items:center; flex-wrap: wrap;}
-    .small{font-size:12px; color:#666}
-    .card{border:1px solid #ddd; border-radius:8px; padding:8px;}
+    .small{font-size:12px; color:#9ca3af}
+    .card{border:1px solid #27272a; border-radius:8px; padding:10px; background:#111214;}
+    input, select, button{background:#0f1113; color:#e5e7eb; border:1px solid #2a2b2f; border-radius:6px; padding:6px 8px;}
+    button{cursor:pointer}
     #stageWrap{max-width:100%; overflow:auto; transform-origin: top left;}
     #stage{
       position:relative; width:var(--STAGE-W); height:var(--STAGE-H);
-      border:1px dashed #999; background:#111; margin:16px 0;
+      border:1px dashed #3f3f46; background:#0b0b0c; margin:16px 0;
       touch-action:none; user-select:none;
     }
     .thumb{
-      position:absolute; cursor:move; outline:1px solid rgba(255,255,255,.25);
+      position:absolute; cursor:move; outline:1px solid rgba(255,255,255,.15);
       will-change: transform, opacity; transform-origin:center center;
       touch-action:none; user-select:none;
-      max-width:40%; max-height:40%;
     }
-	.thumb.text {
-  padding: 6px 10px;
-  color: #fff;
-  background: transparent;     /* puedes poner un fondo temporal si quieres ver el área */
-  white-space: pre-wrap;       /* respeta saltos de línea */
-  text-shadow: 0 0 3px rgba(0,0,0,.6);
-  max-width: 60%;              /* opcional (hazlo igual en overlay o quítalo en ambos) */
-  line-height: 1.1;
-}
-
+    /* Texto con fondo TRANSPARENTE (como pediste) */
+    .thumb.text{
+      padding: 6px 10px;
+      color: #ffffff;
+      background: transparent;
+      white-space: pre-wrap;
+      text-shadow: 0 0 3px rgba(0,0,0,.7);
+      line-height: 1.15;
+    }
     .selected{ outline:2px solid #4ade80; box-shadow:0 0 0 2px rgba(74,222,128,.2); }
     input[type=range]{ width: 220px; }
-	:root{
-  --frameColor: #e11d48;   /* rojo marco exterior */
-  --safeColor:  #22c55e;   /* verde zona segura  */
-}
 
-/* Contenedor del marco por encima de las miniaturas */
-#obsFrame {
-  position:absolute;
-  inset:0;
-  pointer-events:none;   /* no tapa el drag */
-  z-index: 9999;         /* por encima de las .thumb */
-}
-
-#obsFrame.hidden { display:none; }
-
-#obsFrame .border {
-  position:absolute;
-  inset:0;
-  box-shadow: 0 0 0 4px var(--frameColor) inset;
-  border-radius: 0;
-}
-
-#obsFrame .safe {
-  position:absolute;
-  left: var(--padL, 0px);
-  right: var(--padR, 0px);
-  top: var(--padT, 0px);
-  bottom: var(--padB, 0px);
-  box-shadow: 0 0 0 2px var(--safeColor) inset;
-}
-
-/* Rejilla tipo “regla de tercios” */
-#obsFrame .grid {
-  position:absolute;
-  inset:0;
-  background-image:
-    linear-gradient(to right, rgba(255,255,255,.35) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255,255,255,.35) 1px, transparent 1px);
-  background-size: calc(100%/3) 100%, 100% calc(100%/3);
-  opacity: .4;
-}
-
+    /* Marco OBS superpuesto (no bloquea el drag) */
+    #obsFrame { position:absolute; inset:0; pointer-events:none; z-index: 9999; }
+    #obsFrame.hidden { display:none; }
+    #obsFrame .border { position:absolute; inset:0; box-shadow: 0 0 0 4px var(--frameColor) inset; }
+    #obsFrame .safe   { position:absolute; left:var(--padL,0px); right:var(--padR,0px); top:var(--padT,0px); bottom:var(--padB,0px); box-shadow:0 0 0 2px var(--safeColor) inset; }
+    #obsFrame .grid   { position:absolute; inset:0; background-image:
+      linear-gradient(to right, rgba(255,255,255,.25) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.25) 1px, transparent 1px);
+      background-size: calc(100%/3) 100%, 100% calc(100%/3); opacity:.35; }
   </style>
 </head>
 <body>
   <h1>Panel de Moderadores</h1>
 
-  <!-- Resolución del stage (debe igualar OBS Canvas) -->
-  <div class="row">
+  <!-- Resolución del stage (igual a OBS Canvas) -->
+  <div class="row card">
+    <strong>Resolución del Canvas</strong>
     <input id="sw" type="number" value="1920" style="width:90px"> ×
     <input id="sh" type="number" value="1080" style="width:90px">
     <button id="setRes">Aplicar resolución panel</button>
-    <span class="small">(igual a OBS → Ajustes → Video → Base (Canvas))</span>
+    <span class="small">(Debe igualar OBS → Ajustes → Video → Base (Canvas))</span>
   </div>
 
-  <div class="row">
+  <div class="row card">
     <input id="modKey" type="text" placeholder="Clave moderador">
     <button id="btnLogin">Guardar clave</button>
   </div>
 
-  <div class="row">
+  <div class="row card">
     <input id="url" type="text" placeholder="URL (png/jpg/webm/mp4/mp3/ogg)" style="min-width:320px;">
     <select id="type">
       <option value="image">image</option>
       <option value="video">video</option>
       <option value="audio">audio</option>
-	  <option value="text">text</option> <!-- 👈 nuevo -->
+      <option value="text">text</option>
     </select>
     <button id="btnAddUrl">Agregar URL</button>
+    <span class="small">Videos por URL también quedarán en bucle.</span>
   </div>
 
-  <div class="row">
+  <div class="row card">
     <input id="file" type="file" accept="image/*,video/*,audio/*">
     <button id="btnUpload">Subir</button>
-    <span class="small">(se alojará en /uploads)</span>
+    <span class="small">(Se guardará temporalmente en /uploads)</span>
   </div>
-  
-  <div class="card">
-  <div class="row"><strong>Nuevo texto</strong></div>
-  <div class="row">
-    <input id="txtContent" type="text" placeholder="Escribe el texto..." style="min-width:320px;">
-    <label class="small">Tamaño(px) <input id="txtSize" type="number" value="48" style="width:90px"></label>
-    <label class="small">Color <input id="txtColor" type="color" value="#ffffff"></label>
-    <button id="btnAddText">Agregar texto</button>
-  </div>
-</div>
 
+  <!-- Nuevo Texto -->
+  <div class="card">
+    <div class="row"><strong>Nuevo texto</strong></div>
+    <div class="row">
+      <input id="txtContent" type="text" placeholder="Escribe el texto..." style="min-width:320px;">
+      <label class="small">Tamaño(px) <input id="txtSize" type="number" value="48" style="width:90px"></label>
+      <label class="small">Color <input id="txtColor" type="color" value="#ffffff"></label>
+      <button id="btnAddText">Agregar texto</button>
+    </div>
+  </div>
 
   <!-- Controles del elemento seleccionado -->
   <div class="card" id="controls" style="display:none;">
@@ -139,11 +112,13 @@
         <input id="opacity" type="range" min="0" max="1" step="0.05"><span id="opacityVal" class="small"></span>
       </label>
     </div>
-	<div id="textControls" class="row" style="display:none;">
-  <input id="editText" type="text" placeholder="Editar texto..." style="min-width:320px;">
-  <label class="small">Tamaño(px) <input id="editFontSize" type="number" value="48" style="width:90px"></label>
-  <label class="small">Color <input id="editColor" type="color" value="#ffffff"></label>
-</div>
+
+    <!-- Solo para textos -->
+    <div id="textControls" class="row" style="display:none;">
+      <input id="editText" type="text" placeholder="Editar texto..." style="min-width:320px;">
+      <label class="small">Tamaño(px) <input id="editFontSize" type="number" value="48" style="width:90px"></label>
+      <label class="small">Color <input id="editColor" type="color" value="#ffffff"></label>
+    </div>
 
     <div class="row">
       <button id="front">Al frente</button>
@@ -152,61 +127,60 @@
       <button id="remove">Eliminar</button>
     </div>
   </div>
-<div class="card">
-  <div class="row">
-    <strong>Marco OBS</strong>
-  </div>
-  <div class="row">
-    <label><input type="checkbox" id="showFrame" checked> Mostrar marco</label>
-    <label><input type="checkbox" id="showGrid" checked> Rejilla (tercios)</label>
-    <label><input type="checkbox" id="showSafe" checked> Zona segura</label>
-  </div>
-  <div class="row">
-    <label>Preset:
-      <select id="safePreset">
-        <option value="0">Sin zona segura</option>
-        <option value="5" selected>5%</option>
-        <option value="10">10%</option>
-        <option value="custom">Custom</option>
-      </select>
-    </label>
-    <span class="small">Custom (px):</span>
-    <label>Top <input type="number" id="padT" value="0" style="width:80px"></label>
-    <label>Right <input type="number" id="padR" value="0" style="width:80px"></label>
-    <label>Bottom <input type="number" id="padB" value="0" style="width:80px"></label>
-    <label>Left <input type="number" id="padL" value="0" style="width:80px"></label>
-    <button id="applyFrame">Aplicar</button>
-  </div>
-  <div class="row small">
-    El marco rojo delimita el tamaño real del overlay en OBS. La zona segura (verde) te ayuda a no pegar elementos a los bordes.
-  </div>
-</div>
 
-  <div id="stageWrap"><div id="stage">
-  <!-- Marco superpuesto (no interfiere con el drag) -->
-  <div id="obsFrame" class="hidden">
-    <div class="border"></div>
-    <div class="grid"></div>
-    <div class="safe"></div>
+  <!-- Marco OBS -->
+  <div class="card">
+    <div class="row">
+      <strong>Marco OBS</strong>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="showFrame" checked> Mostrar marco</label>
+      <label><input type="checkbox" id="showGrid" checked> Rejilla (tercios)</label>
+      <label><input type="checkbox" id="showSafe" checked> Zona segura</label>
+    </div>
+    <div class="row">
+      <label>Preset:
+        <select id="safePreset">
+          <option value="0">Sin zona segura</option>
+          <option value="5" selected>5%</option>
+          <option value="10">10%</option>
+          <option value="custom">Custom</option>
+        </select>
+      </label>
+      <span class="small">Custom (px):</span>
+      <label>Top <input type="number" id="padT" value="0" style="width:80px"></label>
+      <label>Right <input type="number" id="padR" value="0" style="width:80px"></label>
+      <label>Bottom <input type="number" id="padB" value="0" style="width:80px"></label>
+      <label>Left <input type="number" id="padL" value="0" style="width:80px"></label>
+      <button id="applyFrame">Aplicar</button>
+    </div>
+    <div class="row small">
+      El marco rojo delimita el tamaño real del overlay en OBS. La zona segura (verde) ayuda a no pegar elementos a los bordes.
+    </div>
   </div>
-</div>
-</div>
 
-
-
+  <div id="stageWrap">
+    <div id="stage">
+      <!-- Marco superpuesto dentro del stage -->
+      <div id="obsFrame" class="hidden">
+        <div class="border"></div>
+        <div class="grid"></div>
+        <div class="safe"></div>
+      </div>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
 
-    // === Resolución del stage (persistente) ===
+    // === Resolución persistente del panel ===
     const savedW = localStorage.getItem('STAGE_W') || '1920';
     const savedH = localStorage.getItem('STAGE_H') || '1080';
     document.getElementById('sw').value = savedW;
     document.getElementById('sh').value = savedH;
     document.documentElement.style.setProperty('--STAGE-W', savedW + 'px');
     document.documentElement.style.setProperty('--STAGE-H', savedH + 'px');
-
     document.getElementById('setRes').onclick = () => {
       const w = document.getElementById('sw').value || '1920';
       const h = document.getElementById('sh').value || '1080';
@@ -214,6 +188,7 @@
       localStorage.setItem('STAGE_H', h);
       document.documentElement.style.setProperty('--STAGE-W', w + 'px');
       document.documentElement.style.setProperty('--STAGE-H', h + 'px');
+      updateObsFrame();
     };
 
     // === Clave de moderador ===
@@ -241,32 +216,31 @@
     let lastSend=0; const SEND_MS=1000/30; // throttle ~30fps para sliders
 
     function selectItem(id){
-  selectedId = id;
-  document.querySelectorAll('.thumb').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
-  const it = state.find(e=>e.id===id);
-  const controls = document.getElementById('controls');
-  const textControls = document.getElementById('textControls');
+      selectedId = id;
+      document.querySelectorAll('.thumb').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+      const it = state.find(e=>e.id===id);
+      const controls = document.getElementById('controls');
+      const textControls = document.getElementById('textControls');
 
-  if (!it) { controls.style.display='none'; return; }
-  controls.style.display='block';
-  document.getElementById('selId').textContent = '#' + id;
+      if (!it) { controls.style.display='none'; return; }
+      controls.style.display='block';
+      document.getElementById('selId').textContent = '#' + id;
 
-  // sliders ya existentes:
-  const s = document.getElementById('scale'); s.value = it.scale ?? 1; document.getElementById('scaleVal').textContent = s.value;
-  const r = document.getElementById('rot');   r.value = it.rot ?? 0;   document.getElementById('rotVal').textContent   = r.value + '°';
-  const o = document.getElementById('opacity'); o.value = it.opacity ?? 1; document.getElementById('opacityVal').textContent = o.value;
+      // sliders ya existentes:
+      const s = document.getElementById('scale'); s.value = it.scale ?? 1; document.getElementById('scaleVal').textContent = s.value;
+      const r = document.getElementById('rot');   r.value = it.rot ?? 0;   document.getElementById('rotVal').textContent   = r.value + '°';
+      const o = document.getElementById('opacity'); o.value = it.opacity ?? 1; document.getElementById('opacityVal').textContent = o.value;
 
-  // mostrar controles de texto si corresponde
-  if (it.type === 'text') {
-    textControls.style.display = 'flex';
-    document.getElementById('editText').value = it.text || '';
-    document.getElementById('editFontSize').value = it.fontSize || 48;
-    document.getElementById('editColor').value = it.color || '#ffffff';
-  } else {
-    textControls.style.display = 'none';
-  }
-}
-
+      // mostrar controles de texto si corresponde
+      if (it.type === 'text') {
+        textControls.style.display = 'flex';
+        document.getElementById('editText').value = it.text || '';
+        document.getElementById('editFontSize').value = it.fontSize || 48;
+        document.getElementById('editColor').value = it.color || '#ffffff';
+      } else {
+        textControls.style.display = 'none';
+      }
+    }
 
     function throttledUpdate(id, patch){
       const now = performance.now();
@@ -280,32 +254,30 @@
     function renderStage(){
       const stage=document.getElementById('stage');
       stage.innerHTML='';
+
       state.forEach(it=>{
-        const el=document.createElement(it.type==='image'?'img':'div');
-        el.className='thumb'; el.dataset.id=it.id;
-        if(it.type==='image') el.src=it.url; else el.textContent=it.type.toUpperCase();
+        let el;
+        if (it.type === 'image') {
+          el = document.createElement('img'); el.src = it.url;
+        } else if (it.type === 'text') {
+          el = document.createElement('div');
+          el.classList.add('text');
+          el.textContent = it.text || 'Texto';
+          el.style.fontSize = (it.fontSize || 48) + 'px';
+          el.style.color = it.color || '#ffffff';
+        } else {
+          // video/audio en el panel se ven como bloques con la etiqueta
+          el = document.createElement('div');
+          el.textContent = it.type.toUpperCase();
+        }
+
+        el.className = (el.className ? el.className + ' ' : '') + 'thumb';
+        el.dataset.id=it.id;
         el.style.opacity = it.opacity==null?1:it.opacity;
         el.style.zIndex = (it.zIndex||1);
         el.style.transform=`translate3d(${it.x||0}px,${it.y||0}px,0) scale(${it.scale||1}) rotate(${it.rot||0}deg)`;
         if (selectedId === it.id) el.classList.add('selected');
         stage.appendChild(el);
-		const el = (it.type === 'image')
-  ? document.createElement('img')
-  : (it.type === 'text')
-    ? document.createElement('div')
-    : document.createElement('div'); // video/audio muestran una etiqueta simple en el panel
-
-el.className = 'thumb' + (it.type === 'text' ? ' text' : '');
-el.dataset.id = it.id;
-
-if (it.type === 'image') {
-  el.src = it.url;
-} else if (it.type === 'text') {
-  el.textContent = it.text || 'Texto';
-  el.style.fontSize = (it.fontSize || 48) + 'px';
-  el.style.color = it.color || '#ffffff';
-}
-
 
         el.onclick = (ev)=>{ ev.stopPropagation(); selectItem(it.id); };
 
@@ -338,84 +310,31 @@ if (it.type === 'image') {
         document.querySelectorAll('.thumb').forEach(t=>t.classList.remove('selected')); 
         document.getElementById('controls').style.display='none'; 
       };
-	  ensureObsFrame(); // <-- asegura el marco por encima del contenido
 
-	 
-// === Marco OBS ===
-function ensureObsFrame(){
-  const stage = document.getElementById('stage');
-  let frame = document.getElementById('obsFrame');
-  if (!frame) {
-    frame = document.createElement('div');
-    frame.id = 'obsFrame';
-    frame.innerHTML = '<div class="border"></div><div class="grid"></div><div class="safe"></div>';
-    stage.appendChild(frame);
-  } else {
-    // re-append para traerlo al frente si el render limpió el stage
-    stage.appendChild(frame);
-  }
-  updateObsFrame(); // sincroniza estado visual
-}
-
-function updateObsFrame(){
-  const stage = document.getElementById('stage');
-  const frame = document.getElementById('obsFrame');
-  if (!frame) return;
-
-  const showFrame = document.getElementById('showFrame').checked;
-  const showGrid  = document.getElementById('showGrid').checked;
-  const showSafe  = document.getElementById('showSafe').checked;
-  const preset    = document.getElementById('safePreset').value;
-
-  // Mostrar/ocultar contenedor
-  frame.classList.toggle('hidden', !showFrame);
-
-  // Mostrar/ocultar capas
-  frame.querySelector('.grid').style.display  = showGrid ? 'block' : 'none';
-  frame.querySelector('.safe').style.display  = showSafe ? 'block' : 'none';
-
-  // Cálculo de paddings de la zona segura
-  const W = stage.clientWidth;
-  const H = stage.clientHeight;
-
-  let padT = +document.getElementById('padT').value || 0;
-  let padR = +document.getElementById('padR').value || 0;
-  let padB = +document.getElementById('padB').value || 0;
-  let padL = +document.getElementById('padL').value || 0;
-
-  if (preset !== 'custom') {
-    const p = Number(preset) || 0; // %
-    padT = padB = Math.round(H * p / 100);
-    padL = padR = Math.round(W * p / 100);
-    // refleja en inputs para que veas los px reales
-    document.getElementById('padT').value = padT;
-    document.getElementById('padB').value = padB;
-    document.getElementById('padL').value = padL;
-    document.getElementById('padR').value = padR;
-  }
-
-  // Aplica como variables CSS al propio frame
-  frame.style.setProperty('--padT', padT + 'px');
-  frame.style.setProperty('--padR', padR + 'px');
-  frame.style.setProperty('--padB', padB + 'px');
-  frame.style.setProperty('--padL', padL + 'px');
-}
-
-// Listeners UI marco
-['showFrame','showGrid','showSafe','safePreset','padT','padR','padB','padL'].forEach(id=>{
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('input', updateObsFrame);
-});
-document.getElementById('applyFrame')?.addEventListener('click', updateObsFrame);
-
- 
-	  
+      // Asegurar marco por encima
+      ensureObsFrame();
     }
 
     // === Sliders (escala/rotación/opacidad) con throttle ===
     document.getElementById('scale').oninput   = (e)=>{ if(!selectedId) return; const v=Number(e.target.value); document.getElementById('scaleVal').textContent=v; throttledUpdate(selectedId,{scale:v}); };
     document.getElementById('rot').oninput     = (e)=>{ if(!selectedId) return; const v=Number(e.target.value); document.getElementById('rotVal').textContent=v+'°'; throttledUpdate(selectedId,{rot:v}); };
     document.getElementById('opacity').oninput = (e)=>{ if(!selectedId) return; const v=Number(e.target.value); document.getElementById('opacityVal').textContent=v; throttledUpdate(selectedId,{opacity:v}); };
+
+    // === Controles de texto ===
+    document.getElementById('editText').addEventListener('input', (e)=>{
+      if(!selectedId) return;
+      socket.emit('item:update', { id: selectedId, patch: { text: e.target.value } });
+    });
+    document.getElementById('editFontSize').addEventListener('input', (e)=>{
+      if(!selectedId) return;
+      const v = Number(e.target.value) || 48;
+      socket.emit('item:update', { id: selectedId, patch: { fontSize: v } });
+    });
+    document.getElementById('editColor').addEventListener('input', (e)=>{
+      if(!selectedId) return;
+      const v = e.target.value || '#ffffff';
+      socket.emit('item:update', { id: selectedId, patch: { color: v } });
+    });
 
     // === Botones de control ===
     document.getElementById('front').onclick = () => {
@@ -437,42 +356,28 @@ document.getElementById('applyFrame')?.addEventListener('click', updateObsFrame)
       selectedId = null;
       document.getElementById('controls').style.display='none';
     };
-	function selectItem(id){
-  selectedId = id;
-  document.querySelectorAll('.thumb').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
-  const it = state.find(e=>e.id===id);
-  const controls = document.getElementById('controls');
-  const textControls = document.getElementById('textControls');
 
-  if (!it) { controls.style.display='none'; return; }
-  controls.style.display='block';
-  document.getElementById('selId').textContent = '#' + id;
-
-  // sliders ya existentes:
-  const s = document.getElementById('scale'); s.value = it.scale ?? 1; document.getElementById('scaleVal').textContent = s.value;
-  const r = document.getElementById('rot');   r.value = it.rot ?? 0;   document.getElementById('rotVal').textContent   = r.value + '°';
-  const o = document.getElementById('opacity'); o.value = it.opacity ?? 1; document.getElementById('opacityVal').textContent = o.value;
-
-  // mostrar controles de texto si corresponde
-  if (it.type === 'text') {
-    textControls.style.display = 'flex';
-    document.getElementById('editText').value = it.text || '';
-    document.getElementById('editFontSize').value = it.fontSize || 48;
-    document.getElementById('editColor').value = it.color || '#ffffff';
-  } else {
-    textControls.style.display = 'none';
-  }
-}
-
-
-    // === Wire básico para altas ===
+    // === Wire altas ===
     document.getElementById('btnAddUrl').onclick=()=>{
       const url=document.getElementById('url').value.trim();
       const type=document.getElementById('type').value;
       if(!url) return alert('URL vacía');
-     socket.emit('item:add',{type,url,x:240,y:180,scale:1,rot:0,opacity:1,visible:true,loop:true});
-
+      const base = { type, x:200, y:150, scale:1, rot:0, opacity:1, visible:true };
+      if (type === 'text') {
+        socket.emit('item:add', { ...base, text:url, fontSize:48, color:'#ffffff' }); // si alguien pega texto en el campo URL
+      } else {
+        const extra = (type==='video') ? { loop:true } : {};
+        socket.emit('item:add',{ ...base, url, ...extra });
+      }
       document.getElementById('url').value='';
+    };
+
+    document.getElementById('btnAddText').onclick = () => {
+      const text = document.getElementById('txtContent').value.trim() || 'Texto';
+      const fontSize = Number(document.getElementById('txtSize').value) || 48;
+      const color = document.getElementById('txtColor').value || '#ffffff';
+      socket.emit('item:add', { type:'text', text, fontSize, color, x:200, y:150, scale:1, rot:0, opacity:1, visible:true });
+      document.getElementById('txtContent').value='';
     };
 
     document.getElementById('btnUpload').onclick=async()=>{
@@ -480,25 +385,9 @@ document.getElementById('applyFrame')?.addEventListener('click', updateObsFrame)
       let type='image'; const l=url.toLowerCase();
       if(/\.(mp4|webm|ogv|mkv|mov)$/.test(l)) type='video';
       if(/\.(mp3|wav|ogg|m4a|aac)$/.test(l)) type='audio';
-      socket.emit('item:add',{type,url,x:240,y:180,scale:1,rot:0,opacity:1,visible:true});
+      const extra = (type==='video') ? { loop:true } : {};
+      socket.emit('item:add',{type,url,x:240,y:180,scale:1,rot:0,opacity:1,visible:true, ...extra});
     };
-document.getElementById('btnAddText').onclick = () => {
-  const text = document.getElementById('txtContent').value.trim() || 'Texto';
-  const fontSize = Number(document.getElementById('txtSize').value) || 48;
-  const color = document.getElementById('txtColor').value || '#ffffff';
-
-  socket.emit('item:add', {
-    type: 'text',
-    text,
-    fontSize,
-    color,
-    x: 200, y: 150,
-    scale: 1, rot: 0, opacity: 1, visible: true
-  });
-
-  document.getElementById('txtContent').value = '';
-};
-
 
     // === Socket events mínimos para re-render ===
     function syncUI(){ renderStage(); }
@@ -506,12 +395,68 @@ document.getElementById('btnAddText').onclick = () => {
     socket.on('item:added',(it)=>{state.push(it);syncUI();});
     socket.on('item:updated',({id,patch})=>{
       const i=state.findIndex(e=>e.id===id); if(i>-1) state[i]=patch; 
-      // Si el cambio fue de este mismo cliente, igual re-render para mantener selección
       syncUI();
       if (selectedId === id) selectItem(id);
     });
     socket.on('item:removed',(id)=>{state=state.filter(e=>e.id!==id);syncUI(); if(selectedId===id){selectedId=null;document.getElementById('controls').style.display='none';}});
     socket.on('items:cleared',()=>{state=[];syncUI(); selectedId=null;document.getElementById('controls').style.display='none';});
+
+    // === Marco OBS ===
+    function ensureObsFrame(){
+      const stage = document.getElementById('stage');
+      let frame = document.getElementById('obsFrame');
+      if (!frame) {
+        frame = document.createElement('div');
+        frame.id = 'obsFrame';
+        frame.innerHTML = '<div class="border"></div><div class="grid"></div><div class="safe"></div>';
+        stage.appendChild(frame);
+      } else {
+        stage.appendChild(frame);
+      }
+      updateObsFrame();
+    }
+    function updateObsFrame(){
+      const stage = document.getElementById('stage');
+      const frame = document.getElementById('obsFrame');
+      if (!frame) return;
+
+      const showFrame = document.getElementById('showFrame').checked;
+      const showGrid  = document.getElementById('showGrid').checked;
+      const showSafe  = document.getElementById('showSafe').checked;
+      const preset    = document.getElementById('safePreset').value;
+
+      frame.classList.toggle('hidden', !showFrame);
+      frame.querySelector('.grid').style.display  = showGrid ? 'block' : 'none';
+      frame.querySelector('.safe').style.display  = showSafe ? 'block' : 'none';
+
+      const W = stage.clientWidth;
+      const H = stage.clientHeight;
+
+      let padT = +document.getElementById('padT').value || 0;
+      let padR = +document.getElementById('padR').value || 0;
+      let padB = +document.getElementById('padB').value || 0;
+      let padL = +document.getElementById('padL').value || 0;
+
+      if (preset !== 'custom') {
+        const p = Number(preset) || 0; // %
+        padT = padB = Math.round(H * p / 100);
+        padL = padR = Math.round(W * p / 100);
+        document.getElementById('padT').value = padT;
+        document.getElementById('padB').value = padB;
+        document.getElementById('padL').value = padL;
+        document.getElementById('padR').value = padR;
+      }
+
+      frame.style.setProperty('--padT', padT + 'px');
+      frame.style.setProperty('--padR', padR + 'px');
+      frame.style.setProperty('--padB', padB + 'px');
+      frame.style.setProperty('--padL', padL + 'px');
+    }
+    ['showFrame','showGrid','showSafe','safePreset','padT','padR','padB','padL'].forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateObsFrame);
+    });
+    document.getElementById('applyFrame')?.addEventListener('click', updateObsFrame);
   </script>
 </body>
 </html>

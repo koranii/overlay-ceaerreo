@@ -5,32 +5,21 @@
   <title>Overlay</title>
   <style>
     :root { 
-  --STAGE-W: 1920px;  /* pon aquí tu ancho por defecto */
-  --STAGE-H: 1080px;  /* pon aquí tu alto por defecto  */
-}
-html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
-#stage { position:relative; width:var(--STAGE-W); height:var(--STAGE-H); }
-.item { position:absolute; transform-origin:center center; will-change: transform, opacity; }
-.hidden { display:none; }
-/* Igual que el panel, para que “se sienta” del mismo tamaño base */
-.item {
-  max-width: 40%;
-  max-height: 40%;
-  object-fit: contain;
-  }
-  .item.text {
-  padding: 6px 10px;
-  color: #fff;
-  background: transparent;   /* pon un fondo si te ayuda a ver el cuadro */
-  white-space: pre-wrap;
-  text-shadow: 0 0 3px rgba(0,0,0,.6);
-  max-width: 60%;            /* si usaste esto en el panel, repítelo aquí; si no, quítalo en ambos */
-  line-height: 1.1;
-}
-
-
-
-
+      --STAGE-W: 1920px;  /* por defecto, puedes sobreescribir con ?w */
+      --STAGE-H: 1080px;  /* por defecto, puedes sobreescribir con ?h */
+    }
+    html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
+    #stage { position:relative; width:var(--STAGE-W); height:var(--STAGE-H); }
+    .item { position:absolute; transform-origin:center center; will-change: transform, opacity; }
+    .item.text{
+      padding: 6px 10px;
+      color:#ffffff;
+      background: transparent;     /* Fondo transparente (como pediste) */
+      white-space: pre-wrap;
+      text-shadow: 0 0 3px rgba(0,0,0,.7);
+      line-height: 1.15;
+    }
+    .hidden { display:none; }
   </style>
 </head>
 <body>
@@ -38,17 +27,18 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
-	// Lee ?w=1920&h=1080 para que el overlay calce 1:1 con OBS
-(function applySizeFromQuery(){
-  const p = new URLSearchParams(location.search);
-  const w = p.get('w'), h = p.get('h');
-  if (w) document.documentElement.style.setProperty('--STAGE-W', w.replace('px','') + 'px');
-  if (h) document.documentElement.style.setProperty('--STAGE-H', h.replace('px','') + 'px');
-})();
+
+    // Permite fijar tamaño exacto desde OBS: /overlay?w=1920&h=1080
+    (function applySizeFromQuery(){
+      const p = new URLSearchParams(location.search);
+      const w = p.get('w'), h = p.get('h');
+      if (w) document.documentElement.style.setProperty('--STAGE-W', w.replace('px','') + 'px');
+      if (h) document.documentElement.style.setProperty('--STAGE-H', h.replace('px','') + 'px');
+    })();
 
     const stage = document.getElementById('stage');
     const items = new Map();        // id -> elemento DOM
-    const lastKnown = new Map();    // id -> { x, y, scale, rot, opacity, zIndex, visible, muted, loop }
+    const lastKnown = new Map();    // id -> snapshot (x,y,scale,rot,opacity,zIndex,visible,muted,loop, text,fontSize,color)
 
     function getSnapshot(it) {
       return {
@@ -60,7 +50,10 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
         zIndex: it.zIndex || 1,
         visible: it.visible !== false,
         muted: !!it.muted,
-        loop: !!it.loop
+        loop: it.loop !== false, // por defecto true para videos
+        text: it.text,
+        fontSize: it.fontSize,
+        color: it.color
       };
     }
 
@@ -69,70 +62,52 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
       if(item.type === 'image'){
         el = document.createElement('img'); el.src = item.url;
       } else if(item.type === 'video'){
-  el = document.createElement('video');
-  el.src = item.url;
-  el.autoplay = true;
-  el.loop = true;           // 🔁 se reproduce en bucle
-  el.muted = !!item.muted;
-  el.playsInline = true;
-  el.controls = false;
-}
- else if(item.type === 'audio'){
+        el = document.createElement('video');
+        el.src = item.url;
+        el.autoplay = true; 
+        el.loop = true;           // 🔁 en bucle
+        el.muted = !!item.muted; 
+        el.playsInline = true; 
+        el.controls = false;
+      } else if(item.type === 'audio'){
         el = document.createElement('audio');
         el.src = item.url; el.autoplay = true; el.loop = !!item.loop; el.muted = !!item.muted; el.controls = false;
-       } else if (item.type === 'text') {                // 👈 NUEVO
-    el = document.createElement('div');
-    el.classList.add('text');                       // aplica estilos .item.text
-    el.textContent = item.text || 'Texto';
-    el.style.fontSize = (item.fontSize || 48) + 'px';
-    el.style.color = item.color || '#ffffff';
-  } else {
-    return;
-  }
-      el.className = 'item';
+      } else if(item.type === 'text'){
+        el = document.createElement('div');
+        el.classList.add('text');
+        el.textContent = item.text || 'Texto';
+        el.style.fontSize = (item.fontSize || 48) + 'px';
+        el.style.color = item.color || '#ffffff';
+      } else {
+        return;
+      }
+      el.classList.add('item');
       el.dataset.id = item.id;
       stage.appendChild(el);
       items.set(item.id, el);
       const snap = getSnapshot(item);
       lastKnown.set(item.id, snap);
       applyStyles(item.id, snap);
-	  applyStyles(item.id, snap, item); // pasa item para texto
-}
-    
+    }
 
     function applyStyles(id, snap){
       const el = items.get(id); if(!el) return;
+      // Propiedades de texto si aplica
+      if (el.classList.contains('text')) {
+        if (snap.text != null) el.textContent = snap.text;
+        if (snap.fontSize != null) el.style.fontSize = snap.fontSize + 'px';
+        if (snap.color != null) el.style.color = snap.color;
+      }
+
       el.style.zIndex = String(snap.zIndex);
       el.style.opacity = snap.opacity;
       el.style.transform = `translate3d(${snap.x}px, ${snap.y}px, 0) scale(${snap.scale}) rotate(${snap.rot}deg)`;
       el.classList.toggle('hidden', !snap.visible);
       if (el.tagName === 'VIDEO') {
-  el.loop = true;          // 🔁 mantener bucle aunque se actualice
-  el.muted = snap.muted;
-}
-
-    
-  // Si es texto, aplica sus props (usa rawItem si llegó en mount; si no, extrae de snap si los guardas ahí)
-  if (rawItem?.type === 'text' || el.classList.contains('text')) {
-    // Intentamos leer de rawItem si existe, si no de snap (puedes guardar fontSize/color en snap si prefieres)
-    const fontSize = (rawItem && rawItem.fontSize != null) ? rawItem.fontSize : (el.style.fontSize ? parseFloat(el.style.fontSize) : 48);
-    const color    = (rawItem && rawItem.color) || el.style.color || '#ffffff';
-    const text     = (rawItem && rawItem.text) || el.textContent || 'Texto';
-    el.textContent = text;
-    el.style.fontSize = fontSize + 'px';
-    el.style.color = color;
-  }
-
-  el.style.zIndex = String(snap.zIndex);
-  el.style.opacity = snap.opacity;
-  el.style.transform = `translate3d(${snap.x}px, ${snap.y}px, 0) scale(${snap.scale}) rotate(${snap.rot}deg)`;
-  el.classList.toggle('hidden', !snap.visible);
-
-  if (el.tagName === 'VIDEO') {
-    el.loop = true;
-    el.muted = snap.muted;
-  }
-}
+        el.loop = true;                 // forzar loop
+        el.muted = snap.muted;
+      }
+    }
 
     function unmount(id){
       const el = items.get(id); if(!el) return;
@@ -149,11 +124,10 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
     socket.on('item:added', (it) => mount(it));
 
     socket.on('item:updated', ({ id, patch }) => {
-      // patch ya trae el estado completo del item desde el server
       const snap = getSnapshot(patch);
       lastKnown.set(id, snap);
-      applyStyles(id, snap, patch); // 👈 pasa patch para texto
-});
+      applyStyles(id, snap);
+    });
 
     socket.on('item:removed', (id) => unmount(id));
 
@@ -165,8 +139,7 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
     // ---- PREVIEW EN TIEMPO REAL (NO PERSISTE) ----
     socket.on('item:preview', ({ id, x, y }) => {
       const el = items.get(id); if(!el) return;
-      // Usamos el último snapshot conocido para mantener scale/rot/opacity correctos
-      const snap = lastKnown.get(id) || { x:0, y:0, scale:1, rot:0, opacity:1, zIndex:1, visible:true, muted:false, loop:false };
+      const snap = lastKnown.get(id) || { x:0, y:0, scale:1, rot:0, opacity:1, zIndex:1, visible:true, muted:false, loop:true };
       const temp = { ...snap, x, y };
       applyStyles(id, temp);
     });
