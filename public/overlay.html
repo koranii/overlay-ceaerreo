@@ -4,10 +4,15 @@
   <meta charset="UTF-8" />
   <title>Overlay</title>
   <style>
-    html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
-    #stage { position:relative; width:100vw; height:100vh; }
-    .item { position:absolute; transform-origin:center center; will-change: transform, opacity; }
-    .hidden { display:none; }
+    :root { 
+  --STAGE-W: 1920px;  /* pon aquí tu ancho por defecto */
+  --STAGE-H: 1080px;  /* pon aquí tu alto por defecto  */
+}
+html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
+#stage { position:relative; width:var(--STAGE-W); height:var(--STAGE-H); }
+.item { position:absolute; transform-origin:center center; will-change: transform, opacity; }
+.hidden { display:none; }
+
   </style>
 </head>
 <body>
@@ -15,6 +20,14 @@
   <script src="/socket.io/socket.io.js"></script>
   <script>
     const socket = io();
+	// Lee ?w=1920&h=1080 para que el overlay calce 1:1 con OBS
+(function applySizeFromQuery(){
+  const p = new URLSearchParams(location.search);
+  const w = p.get('w'), h = p.get('h');
+  if (w) document.documentElement.style.setProperty('--STAGE-W', w.replace('px','') + 'px');
+  if (h) document.documentElement.style.setProperty('--STAGE-H', h.replace('px','') + 'px');
+})();
+
     const stage = document.getElementById('stage');
     const items = new Map();        // id -> elemento DOM
     const lastKnown = new Map();    // id -> { x, y, scale, rot, opacity, zIndex, visible, muted, loop }
