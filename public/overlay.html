@@ -12,6 +12,13 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
 #stage { position:relative; width:var(--STAGE-W); height:var(--STAGE-H); }
 .item { position:absolute; transform-origin:center center; will-change: transform, opacity; }
 .hidden { display:none; }
+/* Igual que el panel, para que “se sienta” del mismo tamaño base */
+.item {
+  max-width: 40%;
+  max-height: 40%;
+  object-fit: contain;
+}
+
 
   </style>
 </head>
