@@ -17,7 +17,18 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
   max-width: 40%;
   max-height: 40%;
   object-fit: contain;
+  }
+  .item.text {
+  padding: 6px 10px;
+  color: #fff;
+  background: transparent;   /* pon un fondo si te ayuda a ver el cuadro */
+  white-space: pre-wrap;
+  text-shadow: 0 0 3px rgba(0,0,0,.6);
+  max-width: 60%;            /* si usaste esto en el panel, repítelo aquí; si no, quítalo en ambos */
+  line-height: 1.1;
 }
+
+
 
 
   </style>
@@ -69,9 +80,15 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
  else if(item.type === 'audio'){
         el = document.createElement('audio');
         el.src = item.url; el.autoplay = true; el.loop = !!item.loop; el.muted = !!item.muted; el.controls = false;
-      } else {
-        return;
-      }
+       } else if (item.type === 'text') {                // 👈 NUEVO
+    el = document.createElement('div');
+    el.classList.add('text');                       // aplica estilos .item.text
+    el.textContent = item.text || 'Texto';
+    el.style.fontSize = (item.fontSize || 48) + 'px';
+    el.style.color = item.color || '#ffffff';
+  } else {
+    return;
+  }
       el.className = 'item';
       el.dataset.id = item.id;
       stage.appendChild(el);
@@ -79,7 +96,9 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
       const snap = getSnapshot(item);
       lastKnown.set(item.id, snap);
       applyStyles(item.id, snap);
-    }
+	  applyStyles(item.id, snap, item); // pasa item para texto
+}
+    
 
     function applyStyles(id, snap){
       const el = items.get(id); if(!el) return;
@@ -92,7 +111,28 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
   el.muted = snap.muted;
 }
 
-    }
+    
+  // Si es texto, aplica sus props (usa rawItem si llegó en mount; si no, extrae de snap si los guardas ahí)
+  if (rawItem?.type === 'text' || el.classList.contains('text')) {
+    // Intentamos leer de rawItem si existe, si no de snap (puedes guardar fontSize/color en snap si prefieres)
+    const fontSize = (rawItem && rawItem.fontSize != null) ? rawItem.fontSize : (el.style.fontSize ? parseFloat(el.style.fontSize) : 48);
+    const color    = (rawItem && rawItem.color) || el.style.color || '#ffffff';
+    const text     = (rawItem && rawItem.text) || el.textContent || 'Texto';
+    el.textContent = text;
+    el.style.fontSize = fontSize + 'px';
+    el.style.color = color;
+  }
+
+  el.style.zIndex = String(snap.zIndex);
+  el.style.opacity = snap.opacity;
+  el.style.transform = `translate3d(${snap.x}px, ${snap.y}px, 0) scale(${snap.scale}) rotate(${snap.rot}deg)`;
+  el.classList.toggle('hidden', !snap.visible);
+
+  if (el.tagName === 'VIDEO') {
+    el.loop = true;
+    el.muted = snap.muted;
+  }
+}
 
     function unmount(id){
       const el = items.get(id); if(!el) return;
@@ -112,8 +152,8 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
       // patch ya trae el estado completo del item desde el server
       const snap = getSnapshot(patch);
       lastKnown.set(id, snap);
-      applyStyles(id, snap);
-    });
+      applyStyles(id, snap, patch); // 👈 pasa patch para texto
+});
 
     socket.on('item:removed', (id) => unmount(id));
 

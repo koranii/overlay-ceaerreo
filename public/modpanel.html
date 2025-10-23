@@ -25,6 +25,16 @@
       touch-action:none; user-select:none;
       max-width:40%; max-height:40%;
     }
+	.thumb.text {
+  padding: 6px 10px;
+  color: #fff;
+  background: transparent;     /* puedes poner un fondo temporal si quieres ver el área */
+  white-space: pre-wrap;       /* respeta saltos de línea */
+  text-shadow: 0 0 3px rgba(0,0,0,.6);
+  max-width: 60%;              /* opcional (hazlo igual en overlay o quítalo en ambos) */
+  line-height: 1.1;
+}
+
     .selected{ outline:2px solid #4ade80; box-shadow:0 0 0 2px rgba(74,222,128,.2); }
     input[type=range]{ width: 220px; }
 	:root{
@@ -93,6 +103,7 @@
       <option value="image">image</option>
       <option value="video">video</option>
       <option value="audio">audio</option>
+	  <option value="text">text</option> <!-- 👈 nuevo -->
     </select>
     <button id="btnAddUrl">Agregar URL</button>
   </div>
@@ -102,6 +113,17 @@
     <button id="btnUpload">Subir</button>
     <span class="small">(se alojará en /uploads)</span>
   </div>
+  
+  <div class="card">
+  <div class="row"><strong>Nuevo texto</strong></div>
+  <div class="row">
+    <input id="txtContent" type="text" placeholder="Escribe el texto..." style="min-width:320px;">
+    <label class="small">Tamaño(px) <input id="txtSize" type="number" value="48" style="width:90px"></label>
+    <label class="small">Color <input id="txtColor" type="color" value="#ffffff"></label>
+    <button id="btnAddText">Agregar texto</button>
+  </div>
+</div>
+
 
   <!-- Controles del elemento seleccionado -->
   <div class="card" id="controls" style="display:none;">
@@ -117,6 +139,12 @@
         <input id="opacity" type="range" min="0" max="1" step="0.05"><span id="opacityVal" class="small"></span>
       </label>
     </div>
+	<div id="textControls" class="row" style="display:none;">
+  <input id="editText" type="text" placeholder="Editar texto..." style="min-width:320px;">
+  <label class="small">Tamaño(px) <input id="editFontSize" type="number" value="48" style="width:90px"></label>
+  <label class="small">Color <input id="editColor" type="color" value="#ffffff"></label>
+</div>
+
     <div class="row">
       <button id="front">Al frente</button>
       <button id="back">Al fondo</button>
@@ -163,7 +191,9 @@
   </div>
 </div>
 </div>
-  
+
+
+
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -211,17 +241,32 @@
     let lastSend=0; const SEND_MS=1000/30; // throttle ~30fps para sliders
 
     function selectItem(id){
-      selectedId = id;
-      document.querySelectorAll('.thumb').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
-      const it = state.find(e=>e.id===id);
-      const controls = document.getElementById('controls');
-      if (!it) { controls.style.display='none'; return; }
-      controls.style.display='block';
-      document.getElementById('selId').textContent = '#' + id;
-      const s = document.getElementById('scale'); s.value = it.scale ?? 1; document.getElementById('scaleVal').textContent = s.value;
-      const r = document.getElementById('rot');   r.value = it.rot ?? 0;   document.getElementById('rotVal').textContent   = r.value + '°';
-      const o = document.getElementById('opacity'); o.value = it.opacity ?? 1; document.getElementById('opacityVal').textContent = o.value;
-    }
+  selectedId = id;
+  document.querySelectorAll('.thumb').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+  const it = state.find(e=>e.id===id);
+  const controls = document.getElementById('controls');
+  const textControls = document.getElementById('textControls');
+
+  if (!it) { controls.style.display='none'; return; }
+  controls.style.display='block';
+  document.getElementById('selId').textContent = '#' + id;
+
+  // sliders ya existentes:
+  const s = document.getElementById('scale'); s.value = it.scale ?? 1; document.getElementById('scaleVal').textContent = s.value;
+  const r = document.getElementById('rot');   r.value = it.rot ?? 0;   document.getElementById('rotVal').textContent   = r.value + '°';
+  const o = document.getElementById('opacity'); o.value = it.opacity ?? 1; document.getElementById('opacityVal').textContent = o.value;
+
+  // mostrar controles de texto si corresponde
+  if (it.type === 'text') {
+    textControls.style.display = 'flex';
+    document.getElementById('editText').value = it.text || '';
+    document.getElementById('editFontSize').value = it.fontSize || 48;
+    document.getElementById('editColor').value = it.color || '#ffffff';
+  } else {
+    textControls.style.display = 'none';
+  }
+}
+
 
     function throttledUpdate(id, patch){
       const now = performance.now();
@@ -244,6 +289,23 @@
         el.style.transform=`translate3d(${it.x||0}px,${it.y||0}px,0) scale(${it.scale||1}) rotate(${it.rot||0}deg)`;
         if (selectedId === it.id) el.classList.add('selected');
         stage.appendChild(el);
+		const el = (it.type === 'image')
+  ? document.createElement('img')
+  : (it.type === 'text')
+    ? document.createElement('div')
+    : document.createElement('div'); // video/audio muestran una etiqueta simple en el panel
+
+el.className = 'thumb' + (it.type === 'text' ? ' text' : '');
+el.dataset.id = it.id;
+
+if (it.type === 'image') {
+  el.src = it.url;
+} else if (it.type === 'text') {
+  el.textContent = it.text || 'Texto';
+  el.style.fontSize = (it.fontSize || 48) + 'px';
+  el.style.color = it.color || '#ffffff';
+}
+
 
         el.onclick = (ev)=>{ ev.stopPropagation(); selectItem(it.id); };
 
@@ -375,6 +437,33 @@ document.getElementById('applyFrame')?.addEventListener('click', updateObsFrame)
       selectedId = null;
       document.getElementById('controls').style.display='none';
     };
+	function selectItem(id){
+  selectedId = id;
+  document.querySelectorAll('.thumb').forEach(el => el.classList.toggle('selected', el.dataset.id === id));
+  const it = state.find(e=>e.id===id);
+  const controls = document.getElementById('controls');
+  const textControls = document.getElementById('textControls');
+
+  if (!it) { controls.style.display='none'; return; }
+  controls.style.display='block';
+  document.getElementById('selId').textContent = '#' + id;
+
+  // sliders ya existentes:
+  const s = document.getElementById('scale'); s.value = it.scale ?? 1; document.getElementById('scaleVal').textContent = s.value;
+  const r = document.getElementById('rot');   r.value = it.rot ?? 0;   document.getElementById('rotVal').textContent   = r.value + '°';
+  const o = document.getElementById('opacity'); o.value = it.opacity ?? 1; document.getElementById('opacityVal').textContent = o.value;
+
+  // mostrar controles de texto si corresponde
+  if (it.type === 'text') {
+    textControls.style.display = 'flex';
+    document.getElementById('editText').value = it.text || '';
+    document.getElementById('editFontSize').value = it.fontSize || 48;
+    document.getElementById('editColor').value = it.color || '#ffffff';
+  } else {
+    textControls.style.display = 'none';
+  }
+}
+
 
     // === Wire básico para altas ===
     document.getElementById('btnAddUrl').onclick=()=>{
@@ -393,6 +482,23 @@ document.getElementById('applyFrame')?.addEventListener('click', updateObsFrame)
       if(/\.(mp3|wav|ogg|m4a|aac)$/.test(l)) type='audio';
       socket.emit('item:add',{type,url,x:240,y:180,scale:1,rot:0,opacity:1,visible:true});
     };
+document.getElementById('btnAddText').onclick = () => {
+  const text = document.getElementById('txtContent').value.trim() || 'Texto';
+  const fontSize = Number(document.getElementById('txtSize').value) || 48;
+  const color = document.getElementById('txtColor').value || '#ffffff';
+
+  socket.emit('item:add', {
+    type: 'text',
+    text,
+    fontSize,
+    color,
+    x: 200, y: 150,
+    scale: 1, rot: 0, opacity: 1, visible: true
+  });
+
+  document.getElementById('txtContent').value = '';
+};
+
 
     // === Socket events mínimos para re-render ===
     function syncUI(){ renderStage(); }
