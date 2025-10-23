@@ -58,10 +58,15 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
       if(item.type === 'image'){
         el = document.createElement('img'); el.src = item.url;
       } else if(item.type === 'video'){
-        el = document.createElement('video');
-        el.src = item.url;
-        el.autoplay = true; el.loop = !!item.loop; el.muted = !!item.muted; el.playsInline = true; el.controls = false;
-      } else if(item.type === 'audio'){
+  el = document.createElement('video');
+  el.src = item.url;
+  el.autoplay = true;
+  el.loop = true;           // 🔁 se reproduce en bucle
+  el.muted = !!item.muted;
+  el.playsInline = true;
+  el.controls = false;
+}
+ else if(item.type === 'audio'){
         el = document.createElement('audio');
         el.src = item.url; el.autoplay = true; el.loop = !!item.loop; el.muted = !!item.muted; el.controls = false;
       } else {
@@ -83,9 +88,10 @@ html, body { margin:0; padding:0; overflow:hidden; background:transparent; }
       el.style.transform = `translate3d(${snap.x}px, ${snap.y}px, 0) scale(${snap.scale}) rotate(${snap.rot}deg)`;
       el.classList.toggle('hidden', !snap.visible);
       if (el.tagName === 'VIDEO') {
-        el.muted = snap.muted;
-        el.loop = snap.loop;
-      }
+  el.loop = true;          // 🔁 mantener bucle aunque se actualice
+  el.muted = snap.muted;
+}
+
     }
 
     function unmount(id){

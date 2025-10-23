@@ -381,7 +381,8 @@ document.getElementById('applyFrame')?.addEventListener('click', updateObsFrame)
       const url=document.getElementById('url').value.trim();
       const type=document.getElementById('type').value;
       if(!url) return alert('URL vacía');
-      socket.emit('item:add',{type,url,x:200,y:150,scale:1,rot:0,opacity:1,visible:true});
+     socket.emit('item:add',{type,url,x:240,y:180,scale:1,rot:0,opacity:1,visible:true,loop:true});
+
       document.getElementById('url').value='';
     };
 
